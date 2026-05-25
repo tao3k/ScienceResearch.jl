@@ -1,14 +1,15 @@
 """
     ScienceResearch
 
-Own generic Pluto notebook validation and static publication helpers for
-research packages. Domain packages keep algorithm notebooks and fixtures; this
-module aggregates configuration, notebook checks, HTML shell generation, and
-publication APIs.
+Own research-time algorithm experiment contracts, Pluto notebook validation,
+and static publication helpers for research packages. Domain packages keep
+domain algorithms and fixtures; this module provides the reusable substrate for
+running, comparing, recording, and publishing algorithm evidence.
 """
 module ScienceResearch
 
 include("config.jl")
+include("experiments.jl")
 include("notebooks.jl")
 include("html.jl")
 include("publish.jl")
@@ -23,6 +24,14 @@ export NotebookHtmlBuildConfig,
     notebook_index_html,
     page_shell,
     write_notebook_index,
-    build_notebook_html
+    build_notebook_html,
+    DatasetSpec,
+    WorkloadSpec,
+    ExperimentSpec,
+    MetricSpec,
+    ExperimentResult,
+    run_experiment,
+    compare_baseline,
+    write_result_artifact
 
 end
