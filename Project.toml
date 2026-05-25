@@ -1,0 +1,23 @@
+name = "ScienceResearch"
+uuid = "4f0d7e54-8348-4d38-938d-adb4d52f7f0a"
+version = "0.1.0"
+authors = ["CyberXiuXian Workshop"]
+
+[deps]
+Downloads = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
+Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
+PlutoStaticHTML = "359b1769-a58e-495b-9770-312e911026ad"
+
+[compat]
+PlutoStaticHTML = "7"
+julia = "1.12"
+
+[extras]
+JuliaLangProjectHarness = "67259778-f152-405a-bc38-ee6219bce977"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[sources]
+JuliaLangProjectHarness = {url = "https://github.com/JuliaCN/JuliaLangProjectHarness.jl", rev = "0bbd83e5fbb48865ad9bb0409f8f8c4f64ca2d17"}
+
+[targets]
+test = ["JuliaLangProjectHarness", "Test"]

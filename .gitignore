@@ -1,0 +1,6 @@
+/.julia/
+/Manifest.toml
+/build/
+/coverage/
+*.cov
+*.html
