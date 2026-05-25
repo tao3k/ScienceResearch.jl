@@ -10,6 +10,8 @@ struct ResearchDecision
     metric_deltas::Dict{String,Float64}
 end
 
+const RESEARCH_DECISION_STATUSES = (:promote, :needs_more_evidence, :reject, :stale_evidence)
+
 """
     compare_baseline(candidate, baseline; metric)
 
@@ -61,21 +63,26 @@ function threshold_report(result::ExperimentResult)
 end
 
 """
-    decide_research_promotion(candidate; baseline = nothing, required_delta = 0.0)
+    decide_research_promotion(candidate; baseline = nothing, required_delta = 0.0, reject_on_threshold_failure = false, stale = false)
 
 Decide whether an experiment result is a research promotion candidate. A
 candidate is promoted only when every metric threshold passes and every
 baseline delta is at least `required_delta`.
 
-Throws `ArgumentError` when `required_delta` is negative or the baseline uses a
-different experiment spec.
+Throws `ArgumentError` when `required_delta` is negative, when the baseline uses
+a different experiment spec, or when `stale` is true while
+`reject_on_threshold_failure` is also true.
 """
 function decide_research_promotion(
     candidate::ExperimentResult;
     baseline::Union{Nothing,ExperimentResult} = nothing,
     required_delta::Real = 0,
+    reject_on_threshold_failure::Bool = false,
+    stale::Bool = false,
 )
     required_delta >= 0 || throw(ArgumentError("required_delta must be non-negative"))
+    !(stale && reject_on_threshold_failure) ||
+        throw(ArgumentError("stale evidence cannot also request threshold rejection"))
     reasons = String[]
     thresholds = threshold_report(candidate)
     for metric in candidate.spec.metrics
@@ -93,8 +100,15 @@ function decide_research_promotion(
         end
     end
 
-    status = isempty(reasons) ? :promote : :needs_more_evidence
+    status = research_decision_status(; reasons, reject_on_threshold_failure, stale)
     return ResearchDecision(status, reasons, deltas)
+end
+
+function research_decision_status(; reasons::Vector{String}, reject_on_threshold_failure::Bool, stale::Bool)
+    stale && return :stale_evidence
+    isempty(reasons) && return :promote
+    reject_on_threshold_failure && return :reject
+    return :needs_more_evidence
 end
 
 function metric_by_name(spec::ExperimentSpec, name::AbstractString)

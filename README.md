@@ -86,7 +86,10 @@ benchmark = benchmark_experiment(spec, samples = 3) do active_spec
     )
 end
 
-decision = decide_research_promotion(result)
+decision = decide_research_promotion(
+    result;
+    reject_on_threshold_failure = true,
+)
 
 config = NotebookHtmlBuildConfig(;
     package_root = pwd(),

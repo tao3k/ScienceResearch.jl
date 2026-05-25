@@ -68,7 +68,12 @@ using ScienceResearch
     @test algorithm_report.subject_kind == :algorithm
     @test validation_passed(algorithm_report)
 
-    benchmark = benchmark_experiment(spec, samples = 2) do active_spec
+    benchmark = benchmark_experiment(
+        spec;
+        samples = 2,
+        warmups = 1,
+        regression_threshold_ms = 10_000,
+    ) do active_spec
         ExperimentResult(
             active_spec;
             metrics = Dict("quality_score" => 0.80, "latency_ms" => 7.0, "memory_mb" => 90.0),
@@ -76,10 +81,26 @@ using ScienceResearch
     end
     benchmark_stats = benchmark_summary(benchmark)
     @test length(benchmark.samples) == 2
+    @test benchmark.warmups == 1
     @test benchmark.result.spec === spec
     @test benchmark_stats["samples"] == 2.0
+    @test benchmark_stats["warmups"] == 1.0
     @test benchmark_stats["metric.quality_score"] == 0.80
+    @test haskey(benchmark_stats, "elapsed_ms_p50")
+    @test haskey(benchmark_stats, "elapsed_ms_p95")
+    @test benchmark_stats["allocated_bytes_max"] >= benchmark_stats["allocated_bytes_min"]
     @test benchmark_stats["elapsed_ms_max"] >= benchmark_stats["elapsed_ms_min"]
+    noisy_benchmark = benchmark_experiment(
+        spec,
+        samples = 1,
+        regression_threshold_ms = 0.000001,
+    ) do active_spec
+        ExperimentResult(
+            active_spec;
+            metrics = Dict("quality_score" => 0.80, "latency_ms" => 7.0, "memory_mb" => 90.0),
+        )
+    end
+    @test any(startswith("regression threshold missed"), noisy_benchmark.warnings)
 
     decision = decide_research_promotion(candidate; baseline, required_delta = 0.0)
     @test decision.status == :promote
@@ -147,6 +168,8 @@ using ScienceResearch
     @test_throws ArgumentError validate_dataset(dataset, Function[])
     @test_throws ArgumentError validate_dataset(dataset, [_ -> "not a check"])
     @test_throws ArgumentError benchmark_experiment(spec, _ -> candidate; samples = 0)
+    @test_throws ArgumentError benchmark_experiment(spec, _ -> candidate; warmups = -1)
+    @test_throws ArgumentError benchmark_experiment(spec, _ -> candidate; regression_threshold_ms = 0)
     @test_throws ArgumentError compare_baseline(candidate, baseline; metric = "missing")
     other_spec = ExperimentSpec(;
         id = "other-candidate",
@@ -163,6 +186,11 @@ using ScienceResearch
     @test_throws ArgumentError write_experiment_manifest(candidate, "bad.toml"; baseline = other_result)
     @test_throws ErrorException read_experiment_manifest("missing.toml")
     @test_throws ArgumentError decide_research_promotion(candidate; required_delta = -1)
+    @test_throws ArgumentError decide_research_promotion(
+        candidate;
+        stale = true,
+        reject_on_threshold_failure = true,
+    )
 
     weak_candidate = ExperimentResult(
         spec;
@@ -172,4 +200,12 @@ using ScienceResearch
     @test weak_decision.status == :needs_more_evidence
     @test "threshold failed: memory_mb" in weak_decision.reasons
     @test "baseline delta failed: quality_score" in weak_decision.reasons
+    reject_decision = decide_research_promotion(
+        weak_candidate;
+        baseline,
+        reject_on_threshold_failure = true,
+    )
+    @test reject_decision.status == :reject
+    stale_decision = decide_research_promotion(candidate; stale = true)
+    @test stale_decision.status == :stale_evidence
 end
