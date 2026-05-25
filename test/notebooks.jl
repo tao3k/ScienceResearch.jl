@@ -52,5 +52,27 @@ end
         @test !isempty(validate_pluto_notebook(INVALID_NOTEBOOK))
         @test isempty(validate_pluto_notebook_file(joinpath(notebook_dir, "sample_notebook.jl")))
         @test_throws ErrorException discover_pluto_notebooks(joinpath(dir, "missing"))
+
+        artifact_dir = joinpath(dir, "artifacts")
+        mkpath(artifact_dir)
+        write(
+            joinpath(artifact_dir, "candidate.toml"),
+            "schema = \"scienceresearch.experiment_manifest.v1\"\n",
+        )
+        evidence_notebook = VALID_NOTEBOOK * "\n# scienceresearch-artifact: candidate.toml\n"
+        @test isempty(validate_notebook_evidence(evidence_notebook, artifact_dir))
+        @test validate_notebook_evidence(VALID_NOTEBOOK, artifact_dir) ==
+              ["notebook does not reference experiment evidence"]
+        missing_issues = validate_notebook_evidence(
+            VALID_NOTEBOOK * "\n# scienceresearch-artifact: missing.toml\n",
+            artifact_dir,
+        )
+        @test "artifact reference does not exist: missing.toml" in missing_issues
+        escaped_issues = validate_notebook_evidence(
+            VALID_NOTEBOOK * "\n# scienceresearch-artifact: ../candidate.toml\n",
+            artifact_dir,
+        )
+        @test !isempty(escaped_issues)
+        @test_throws ErrorException validate_notebook_evidence(evidence_notebook, joinpath(dir, "missing-artifacts"))
     end
 end

@@ -22,6 +22,8 @@ its production package while keeping the notebook evidence synchronized.
 - Domain packages own domain algorithms, fixtures, and package activation
   policy.
 - `JuliaLangProjectHarness.jl` is used as a development/test dependency only.
+- `PlutoStaticHTML.jl` is a weak dependency used only when static notebook
+  export is requested.
 - Project-specific APIs such as graph search, OCR routing, ontology proof, or
   runtime gateway policy do not belong in ScienceResearch.
 
@@ -33,6 +35,7 @@ ScienceResearch uses a Johnny.Decimal-style documentation layout:
 - [20.01 Experiment Contract](docs/20_research_contracts/20.01_experiment_contract.md)
 - [30.01 Pluto Workflow](docs/30_notebook_workflow/30.01_pluto_workflow.md)
 - [40.01 Agent Research Loop](docs/40_agent_research/40.01_agent_research_loop.md)
+- [50.01 Downstream Algorithm Pattern](docs/50_downstream_patterns/50.01_downstream_algorithm_pattern.md)
 
 ## Minimal Usage
 

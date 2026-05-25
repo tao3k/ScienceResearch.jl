@@ -94,6 +94,21 @@ using ScienceResearch
         @test occursin("`vectorized candidate scoring`", text)
         @test occursin("Status: `promote`", text)
         @test occursin("candidate improves quality and latency", text)
+
+        manifest_path = write_experiment_manifest(
+            candidate,
+            joinpath(dir, "result.toml");
+            validation_reports = [data_report, algorithm_report],
+            benchmark_report = benchmark,
+            baseline,
+        )
+        manifest = read_experiment_manifest(manifest_path)
+        @test manifest["schema"] == "scienceresearch.experiment_manifest.v1"
+        @test manifest["experiment"]["id"] == "algorithm-feasibility"
+        @test manifest["dataset"]["row_count"] == 10_000
+        @test manifest["decision"]["status"] == "promote"
+        @test length(manifest["validation"]) == 2
+        @test manifest["benchmark"]["summary"]["samples"] == 2.0
     end
 
     @test_throws ArgumentError DatasetSpec(; id = "", description = "", source = "")
@@ -133,6 +148,20 @@ using ScienceResearch
     @test_throws ArgumentError validate_dataset(dataset, [_ -> "not a check"])
     @test_throws ArgumentError benchmark_experiment(spec, _ -> candidate; samples = 0)
     @test_throws ArgumentError compare_baseline(candidate, baseline; metric = "missing")
+    other_spec = ExperimentSpec(;
+        id = "other-candidate",
+        title = "Other Candidate",
+        dataset,
+        workload,
+        idea = "different candidate",
+        metrics = [quality, latency, memory],
+    )
+    other_result = ExperimentResult(
+        other_spec;
+        metrics = Dict("quality_score" => 0.5, "latency_ms" => 10.0, "memory_mb" => 100.0),
+    )
+    @test_throws ArgumentError write_experiment_manifest(candidate, "bad.toml"; baseline = other_result)
+    @test_throws ErrorException read_experiment_manifest("missing.toml")
     @test_throws ArgumentError decide_research_promotion(candidate; required_delta = -1)
 
     weak_candidate = ExperimentResult(

@@ -8,6 +8,8 @@ running, comparing, recording, and publishing algorithm evidence.
 """
 module ScienceResearch
 
+import TOML
+
 include("config.jl")
 include("experiments.jl")
 include("notebooks.jl")
@@ -45,6 +47,9 @@ export NotebookHtmlBuildConfig,
     metric_threshold_passes,
     threshold_report,
     decide_research_promotion,
-    write_result_artifact
+    write_result_artifact,
+    write_experiment_manifest,
+    read_experiment_manifest,
+    validate_notebook_evidence
 
 end

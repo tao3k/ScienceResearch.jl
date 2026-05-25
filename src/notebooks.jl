@@ -100,3 +100,38 @@ function validate_pluto_notebook_file(path::AbstractString)
     is_pluto_notebook(path) || return ["not a Pluto notebook: $path"]
     return validate_pluto_notebook(read(path, String))
 end
+
+"""
+    validate_notebook_evidence(notebook_text, artifact_dir)
+
+Return evidence synchronization issues for `scienceresearch-artifact: <path>`
+references embedded in a notebook. Paths are resolved under `artifact_dir`.
+
+Throws `ErrorException` when `artifact_dir` does not exist.
+"""
+function validate_notebook_evidence(notebook_text::AbstractString, artifact_dir::AbstractString)
+    isdir(artifact_dir) || error("artifact directory does not exist: $artifact_dir")
+    issues = String[]
+    refs = collect(eachmatch(r"scienceresearch-artifact:\s*([^\s\"`]+)", notebook_text))
+    isempty(refs) && push!(issues, "notebook does not reference experiment evidence")
+    for ref in refs
+        relative_path = ref.captures[1]
+        if isabspath(relative_path) || any(part -> part == "..", splitpath(relative_path))
+            push!(issues, "artifact reference must be relative and stay under artifact_dir: $relative_path")
+            continue
+        end
+        path = joinpath(artifact_dir, relative_path)
+        if !isfile(path)
+            push!(issues, "artifact reference does not exist: $relative_path")
+            continue
+        end
+        try
+            manifest = read_experiment_manifest(path)
+            get(manifest, "schema", "") == "scienceresearch.experiment_manifest.v1" ||
+                push!(issues, "artifact reference has unsupported schema: $relative_path")
+        catch err
+            push!(issues, "artifact reference is not readable: $relative_path ($(typeof(err)))")
+        end
+    end
+    return issues
+end
